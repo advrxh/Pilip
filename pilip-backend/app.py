@@ -1,26 +1,38 @@
-from datetime import datetime
+from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
-from tortoise.contrib.fastapi import HTTPNotFoundError, register_tortoise
+import aioredis
 from dotenv import load_dotenv
+from fastapi import FastAPI, Request
+from tortoise.contrib.fastapi import register_tortoise
 
 load_dotenv()
 
 from pilip.constants import Config
-from pilip.routers import events_router
+from pilip.routers import events_router, submissions_router
+from pilip.dependencies.redis import redis_error_handler
 
 
-app = FastAPI(debug=Config.DEBUG, title="Pilip")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.state.redis = await aioredis.from_url(
+        url="redis://localhost", username="root", password="root"
+    )
+    yield
+    await app.state.redis.close()
+
+
+app = FastAPI(debug=Config.DEBUG, title="Pilip", lifespan=lifespan)
+
+# exceptions
+app.add_exception_handler(aioredis.RedisError, redis_error_handler)
+
+# setup routers
 app.include_router(events_router)
-
-
-@app.on_event("startup")
-async def startup():
-    Config.STARTUP = datetime.now()
+app.include_router(submissions_router)
 
 
 @app.get("/")
-async def root():
+async def root(request: Request):
     return f"UPTIME: {Config.since_startup()}"
 
 
