@@ -9,6 +9,7 @@ pydantic = "*"
 tortoise-orm = "*"
 python-dotenv = "*"
 asyncpg = "*"
+aioredis = "*"
 
 [dev-packages]
 
