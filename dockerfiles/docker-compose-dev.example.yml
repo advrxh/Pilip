@@ -10,15 +10,8 @@ services:
     ports:
       - 5435:5432
     restart: on-failure:3
-  pgweb:
-    image: sosedoff/pgweb
-    depends_on:
-      - postgres
-    environment:
-      PGWEB_DATABASE_URL: postgres://username:password@postgres:5432/pilip?sslmode=disable
-    ports:
-      - 8085:8081
-    restart: on-failure:3
+    networks:
+      - backend-network
   redis:
     image: redis:latest
     command: redis-server
@@ -28,22 +21,28 @@ services:
     ports:
       - 6379:6379
     networks:
-      - redis-network
-  redis-commander:
-    image: rediscommander/redis-commander:latest
-    environment:
-      - REDIS_HOSTS=local:redis:6379
-      - HTTP_USER=root
-      - HTTP_PASSWORD=qwerty
+      - backend-network
+  backend:
+    image: python:3.10
+    build: 
+      context: path-to-backend-folder
+      dockerfile: Dockerfile
     ports:
-      - 8081:8081
-    networks:
-      - redis-network
+      - 5656:5656
+    environment:
+      - DEBUG=true
+      - DB_URL=postgres://root:root@postgres:5432/pilip
+      - REDIS_URL=redis://redis:6379/
+      - AUTH=root:root,groot:groot
+    restart: on-failure:3
     depends_on:
       - redis
+      - postgres
+    networks:
+      - backend-network
 volumes:
   redis:
   redis-config:
 networks:
-  redis-network:
+  backend-network:
     driver: bridge
