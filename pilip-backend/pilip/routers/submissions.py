@@ -3,10 +3,15 @@ from fastapi import APIRouter, Depends, status, HTTPException
 
 
 from pilip.dependencies.redis import get_redis
+from pilip.dependencies.auth import check_authorization
 from pilip.models.submission import *
 from pilip.util import load_from_str, dump_to_str, get_new_submission_id
 
-router = APIRouter(prefix="/submissions")
+router = APIRouter(
+    prefix="/submissions",
+    tags=["Submissions"],
+    dependencies=[Depends(check_authorization)],
+)
 
 
 @router.put("/{event_id}")
@@ -61,19 +66,19 @@ async def get_submissions_by_event(
     all_submissions = load_from_str(all_submissions)
 
     if all_submissions is None:
-        return HTTPException(status.HTTP_404_NOT_FOUND, detail="Event not found.")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Event not found.")
 
     user_submissions = all_submissions.get(user_id)
 
     if user_submissions is None:
-        return HTTPException(
+        raise HTTPException(
             status.HTTP_404_NOT_FOUND, detail="User not found. Create an event first."
         )
 
     submission = user_submissions.get(submission_id)
 
     if submission is None:
-        return HTTPException(status.HTTP_404_NOT_FOUND, detail="Submission not found.")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Submission not found.")
 
     return submission
 
@@ -94,19 +99,19 @@ async def update_submission_by_user(
     all_submissions = load_from_str(all_submissions)
 
     if all_submissions is None:
-        return HTTPException(status.HTTP_404_NOT_FOUND, detail="Event not found.")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Event not found.")
 
     user_submissions = all_submissions.get(user_id)
 
     if user_submissions is None:
-        return HTTPException(
+        raise HTTPException(
             status.HTTP_404_NOT_FOUND, detail="User not found. Create an event first."
         )
 
     user_submission = user_submissions.get(submission_id)
 
     if user_submission is None:
-        return HTTPException(status.HTTP_404_NOT_FOUND, detail="Submission not found.")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Submission not found.")
 
     user_submissions[submission_id] = submission.model_dump()
     all_submissions[user_id] = user_submissions
@@ -131,12 +136,12 @@ async def delete_submission_by_user(
     all_submissions = load_from_str(all_submissions)
 
     if all_submissions is None:
-        return HTTPException(status.HTTP_404_NOT_FOUND, detail="Event not found.")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Event not found.")
 
     user_submissions = all_submissions.get(user_id)
 
     if user_submissions is None:
-        return HTTPException(
+        raise HTTPException(
             status.HTTP_404_NOT_FOUND,
             detail="Submissions not found. Make a submission first.",
         )
@@ -144,7 +149,7 @@ async def delete_submission_by_user(
     user_submission = user_submissions.get(submission_id)
 
     if user_submission is None:
-        return HTTPException(status.HTTP_404_NOT_FOUND, detail="Submission not found.")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Submission not found.")
 
     submission = user_submissions[submission_id]
 

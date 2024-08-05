@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.exceptions import HTTPException
 from fastapi import status as status_codes
 
@@ -12,8 +12,11 @@ from tortoise.exceptions import (
 
 
 from pilip.models.event import *
+from pilip.dependencies.auth import check_authorization
 
-router = APIRouter(prefix="/events")
+router = APIRouter(
+    prefix="/events", tags=["Events"], dependencies=[Depends(check_authorization)]
+)
 
 
 @router.get("/")
@@ -45,7 +48,7 @@ async def get_events(
             return result_set
 
     except DoesNotExist:
-        return HTTPException(status_codes.HTTP_404_NOT_FOUND, "Not found.")
+        raise HTTPException(status_codes.HTTP_404_NOT_FOUND, "Not found.")
 
 
 @router.put("/")
@@ -58,7 +61,7 @@ async def create_event(event: EventInput):
         return result
 
     except IntegrityError or IncompleteInstanceError:
-        return HTTPException(
+        raise HTTPException(
             status_codes.HTTP_500_INTERNAL_SERVER_ERROR, "Unable to update"
         )
 
@@ -74,9 +77,9 @@ async def update_event(id: int, event: EventInput):
         return db_event
 
     except DoesNotExist:
-        return HTTPException(status_codes.HTTP_404_NOT_FOUND, "Not found.")
+        raise HTTPException(status_codes.HTTP_404_NOT_FOUND, "Not found.")
     except IntegrityError or IncompleteInstanceError:
-        return HTTPException(
+        raise HTTPException(
             status_codes.HTTP_500_INTERNAL_SERVER_ERROR, "Unable to update"
         )
 
@@ -96,9 +99,9 @@ async def delete_event(id: int):
         return event
 
     except DoesNotExist:
-        return HTTPException(status_codes.HTTP_404_NOT_FOUND, "Not found.")
+        raise HTTPException(status_codes.HTTP_404_NOT_FOUND, "Not found.")
     except OperationalError:
-        return HTTPException(
+        raise HTTPException(
             status_codes.HTTP_500_INTERNAL_SERVER_ERROR, "Unable to delete"
         )
 
@@ -110,7 +113,7 @@ async def get_event_status(id: int):
 
         return result
     except DoesNotExist:
-        return HTTPException(status_codes.HTTP_404_NOT_FOUND, "Not found.")
+        raise HTTPException(status_codes.HTTP_404_NOT_FOUND, "Not found.")
 
 
 @router.post("/status")
@@ -124,8 +127,8 @@ async def update_event_status(id: int, status: Status):
         return event_status
 
     except DoesNotExist:
-        return HTTPException(status_codes.HTTP_404_NOT_FOUND, "Not found.")
+        raise HTTPException(status_codes.HTTP_404_NOT_FOUND, "Not found.")
     except IntegrityError or IncompleteInstanceError:
-        return HTTPException(
+        raise HTTPException(
             status_codes.HTTP_500_INTERNAL_SERVER_ERROR, "Unable to update"
         )

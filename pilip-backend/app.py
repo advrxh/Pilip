@@ -1,22 +1,25 @@
 from contextlib import asynccontextmanager
 
-import aioredis
+from aioredis import Redis, RedisError, from_url
 from dotenv import load_dotenv
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends
 from tortoise.contrib.fastapi import register_tortoise
 
 load_dotenv()
 
 from pilip.constants import Config
-from pilip.routers import events_router, submissions_router
-from pilip.dependencies.redis import redis_error_handler
+from pilip.routers import events_router, submissions_router, auth_router
+from pilip.dependencies.redis import get_redis, redis_error_handler
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    app.state.redis = await aioredis.from_url(
+    app.state.redis = await from_url(
         url="redis://localhost", username="root", password="root"
     )
+
+    await app.state.redis.rpush("tokens", "0")
+    await app.state.redis.expire("tokens", 24 * 60 * 60)
     yield
     await app.state.redis.close()
 
@@ -24,15 +27,16 @@ async def lifespan(app: FastAPI):
 app = FastAPI(debug=Config.DEBUG, title="Pilip", lifespan=lifespan)
 
 # exceptions
-app.add_exception_handler(aioredis.RedisError, redis_error_handler)
+app.add_exception_handler(RedisError, redis_error_handler)
 
 # setup routers
 app.include_router(events_router)
 app.include_router(submissions_router)
+app.include_router(auth_router)
 
 
 @app.get("/")
-async def root(request: Request):
+async def root(request: Request, redis: Redis = Depends(get_redis)):
     return f"UPTIME: {Config.since_startup()}"
 
 

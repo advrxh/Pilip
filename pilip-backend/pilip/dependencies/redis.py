@@ -9,4 +9,4 @@ async def get_redis(request: Request) -> Redis:
 
 async def redis_error_handler(request: Request, exception: RedisError):
 
-    return HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Redis error")
+    raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Redis error")
